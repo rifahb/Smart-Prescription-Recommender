@@ -1,10 +1,9 @@
 import pandas as pd
-from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.preprocessing import MultiLabelBinarizer, LabelBinarizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.sparse import hstack
 
 def symptom_tokenizer(x):
-    # Handles empty string or NaN inputs safely
     if not isinstance(x, str):
         return []
     return [s.strip().lower() for s in x.split(',') if s.strip()]
@@ -16,25 +15,34 @@ def treatment_splitter(x):
 
 def load_data(path='data/Diseases_Symptoms.csv'):
     df = pd.read_csv(path)
-
-    # Drop rows with missing critical data
     df = df.dropna(subset=['Symptoms', 'Treatments'])
-
-    # Convert symptoms into vectorized TF-IDF features
     vectorizer = TfidfVectorizer(tokenizer=symptom_tokenizer)
     symptom_features = vectorizer.fit_transform(df['Symptoms'])
-
-    # Use Contagious and Chronic as binary features
     df['Contagious'] = df['Contagious'].astype(int)
     df['Chronic'] = df['Chronic'].astype(int)
     traits = df[['Contagious', 'Chronic']].values
-
-    # Combine TF-IDF symptom features and traits
     X = hstack([symptom_features, traits])
-
-    # Process treatments for multi-label classification
     df['Treatments'] = df['Treatments'].apply(treatment_splitter)
     mlb = MultiLabelBinarizer()
     y = mlb.fit_transform(df['Treatments'])
-
     return X, y, mlb.classes_, vectorizer
+
+def load_disease_data(path='data/Diseases_Symptoms.csv'):
+    df = pd.read_csv(path)
+    df = df.dropna(subset=['Symptoms', 'Name'])
+    vectorizer = TfidfVectorizer(tokenizer=symptom_tokenizer)
+    symptom_features = vectorizer.fit_transform(df['Symptoms'])
+    df['Contagious'] = df['Contagious'].astype(int)
+    df['Chronic'] = df['Chronic'].astype(int)
+    traits = df[['Contagious', 'Chronic']].values
+    X = hstack([symptom_features, traits])
+    lb = LabelBinarizer()
+    y = lb.fit_transform(df['Name'])
+    return X, y, lb.classes_, vectorizer, lb
+
+def get_disease_to_treatments(path='data/Diseases_Symptoms.csv'):
+    df = pd.read_csv(path)
+    mapping = df.groupby('Name')['Treatments'].apply(
+        lambda x: list(set([t.strip() for tx in x for t in str(tx).split(',') if t.strip()]))
+    ).to_dict()
+    return mapping
