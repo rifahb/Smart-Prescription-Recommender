@@ -21,6 +21,8 @@ def predict(symptom_text, contagious, chronic):
 
 def predict_disease(symptom_text, contagious, chronic, top_k=3):
     model = load_model(os.path.join("models", "disease_model.keras"))
+    print("✅ Exists:", os.path.exists(model_path))
+    print("📦 Size:", os.path.getsize(model_path) if os.path.exists(model_path) else "Missing!")
     class_names = joblib.load("models/disease_class_names.pkl")
     vectorizer = joblib.load("models/disease_vectorizer.pkl")
 
