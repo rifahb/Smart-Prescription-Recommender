@@ -43,8 +43,15 @@ def simplify_treatment(t):
 
 # On button click
 if st.button("🔍 Recommend Disease & Treatments"):
-    disease = predict_disease(symptom_input, contagious, chronic)
-    st.info(f"🩺 **Predicted Disease:** {disease}")
+    top_diseases = predict_disease(symptom_input, contagious, chronic)
+
+    for disease, score in top_diseases:
+        st.info(f"🩺 **Possible Disease:** {disease} ({score}%)")
+
+# Then pick top_diseases[0][0] for treatment mapping
+    disease_name = top_diseases[0][0]
+    treatments = disease_to_treatments.get(disease_name, [])
+
 
     treatments = disease_to_treatments.get(disease, [])
     if treatments:
