@@ -21,15 +21,15 @@ if st.button("🔍 Recommend Treatments"):
     result = predict(symptom_input, contagious, chronic)
 
     if result:
-        # Pre-clean: truncate long entries and dedupe by lowercase string
+        # Pre-clean: truncate long entries and dedupe
         seen = set()
         cleaned_result = []
         for t in result:
             t = t.strip()
-            if len(t) > 140:
-                t = t[:137] + "..."
+            if len(t) > 120:
+                t = t[:117] + "..."
             key = t.lower()
-            if key not in seen:
+            if key and key not in seen:
                 seen.add(key)
                 cleaned_result.append(t)
 
@@ -46,31 +46,34 @@ if st.button("🔍 Recommend Treatments"):
 
         for t in cleaned_result:
             tl = t.lower()
-            if any(word in tl for word in ["medication", "drug", "insulin", "immuno", "antibiotic", "antiviral", "chemotherapy"]):
+            if any(w in tl for w in ["medication", "drug", "insulin", "immuno", "antibiotic", "antiviral", "chemotherapy"]):
                 categories["Medication"].append(t)
-            elif any(word in tl for word in ["surgery", "surgical", "removal", "abortion", "intervention"]):
+            elif any(w in tl for w in ["surgery", "surgical", "removal", "abortion", "intervention"]):
                 categories["Surgery"].append(t)
-            elif any(word in tl for word in ["therapy", "speech", "physical"]):
+            elif any(w in tl for w in ["therapy", "speech", "physical"]):
                 categories["Therapy"].append(t)
-            elif any(word in tl for word in ["rest", "hydration", "supportive", "compresses", "care", "pain relief", "hospitalization"]):
+            elif any(w in tl for w in ["rest", "hydration", "supportive", "compresses", "care", "hospitalization"]):
                 categories["Supportive Care"].append(t)
-            elif any(word in tl for word in ["lifestyle", "exercise", "diet", "avoid", "modification"]):
+            elif any(w in tl for w in ["lifestyle", "exercise", "diet", "avoid", "modification"]):
                 categories["Lifestyle"].append(t)
-            elif any(word in tl for word in ["diagnose", "imaging", "urine", "culture", "test", "scan"]):
+            elif any(w in tl for w in ["diagnose", "imaging", "urine", "culture", "test", "scan"]):
                 categories["Diagnosis"].append(t)
             else:
                 categories["Other"].append(t)
 
-        # Display grouped output
-        st.success("✅ **Recommended Treatments:**")
-
+        # Display limited output
+        st.success("✅ **Top Recommended Treatments:**")
         for group, treatments in categories.items():
             if treatments:
                 st.subheader(f"🔹 {group}")
-                for item in sorted(treatments):
+                short_list = sorted(treatments)[:5]
+                for item in short_list:
                     st.markdown(f"- {item}")
-
-        st.caption(f"🧾 Total unique suggestions: {len(cleaned_result)}")
+                if len(treatments) > 5:
+                    with st.expander(f"See all {len(treatments)} {group.lower()} options"):
+                        for item in sorted(treatments[5:]):
+                            st.markdown(f"- {item}")
+        st.caption(f"🧾 Showing top 5 per category. Total unique suggestions: {len(cleaned_result)}")
 
     else:
         st.warning("⚠️ No confident recommendation found.")
