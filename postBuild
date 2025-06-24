@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "📦 Installing Git LFS and pulling large model files..."
+git lfs install
+git lfs pull
