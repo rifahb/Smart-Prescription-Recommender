@@ -8,26 +8,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.predict import predict_disease
 from src.preprocess import get_disease_to_treatments
 
-# Streamlit page setup
+# Page setup
 st.set_page_config(page_title="Smart Prescription Recommender", page_icon="💊")
 st.title("💊 Smart Prescription Recommender")
-st.markdown("Enter patient symptoms and traits below to receive AI-suggested disease and treatment classes.")
+st.markdown("Enter patient symptoms and traits below to receive **AI-suggested disease and treatment classes.**")
 
-# Input fields
+# Input
 symptom_input = st.text_input("📝 Enter symptoms (comma-separated):", "itchy skin, small blisters")
-contagious = st.checkbox("Contagious?")
-chronic = st.checkbox("Chronic?")
+col1, col2 = st.columns(2)
+with col1:
+    contagious = st.checkbox("🦠 Contagious?")
+with col2:
+    chronic = st.checkbox("♾️ Chronic?")
 
-# Load mapping from disease to treatments
+# Load disease → treatments map
 disease_to_treatments = get_disease_to_treatments()
 
-# Helper function: standardize treatment names
+# Helper: simplify messy treatment text
 def simplify_treatment(t):
     if not isinstance(t, str): return ""
     t = t.strip().lower()
-    t = re.sub(r'\(.*?\)', '', t)              # remove text in parentheses
-    t = re.sub(r'[^a-zA-Z0-9\s]', '', t)       # remove special characters
-    t = re.sub(r'\s+', ' ', t).strip()         # normalize whitespace
+    t = re.sub(r'\(.*?\)', '', t)              # Remove text inside parentheses
+    t = re.sub(r'[^a-zA-Z0-9\s]', '', t)       # Remove punctuation
+    t = re.sub(r'\s+', ' ', t).strip()         # Normalize spaces
 
     if "antibiotic" in t:
         return "Antibiotics"
@@ -41,21 +44,20 @@ def simplify_treatment(t):
         return ""
     return t.title()
 
-# On button click
+# Recommend button
 if st.button("🔍 Recommend Disease & Treatments"):
     top_diseases = predict_disease(symptom_input, contagious, chronic)
 
     for disease, score in top_diseases:
+        st.markdown(f"---")
         st.info(f"🩺 **Possible Disease:** {disease} ({score}%)")
 
-# Then pick top_diseases[0][0] for treatment mapping
-    disease_name = top_diseases[0][0]
-    treatments = disease_to_treatments.get(disease_name, [])
+        treatments = disease_to_treatments.get(disease, [])
+        if not treatments:
+            st.warning("⚠️ No treatments found for this disease.")
+            continue
 
-
-    treatments = disease_to_treatments.get(disease, [])
-    if treatments:
-        # Clean, normalize, deduplicate
+        # Clean & normalize
         seen = set()
         cleaned_result = []
         for t in treatments:
@@ -66,7 +68,7 @@ if st.button("🔍 Recommend Disease & Treatments"):
                 seen.add(t.lower())
                 cleaned_result.append(t)
 
-        # Grouping logic
+        # Group treatments
         categories = {
             "Medication": [],
             "Surgery": [],
@@ -94,8 +96,8 @@ if st.button("🔍 Recommend Disease & Treatments"):
             else:
                 categories["Other"].append(t)
 
-        # Display grouped treatments
-        st.success("✅ **Top Recommended Treatments:**")
+        # Display treatments per category
+        st.success(f"✅ **Recommended Treatments for {disease}:**")
         for group, items in categories.items():
             if items:
                 st.subheader(f"🔹 {group}")
@@ -107,7 +109,6 @@ if st.button("🔍 Recommend Disease & Treatments"):
                     with st.expander(f"See all {len(remaining)} additional {group.lower()} options"):
                         for item in remaining:
                             st.markdown(f"- {item}")
-        st.caption(f"🧾 Showing top 5 per category. Total unique suggestions: {len(cleaned_result)}")
 
-    else:
-        st.warning("⚠️ No treatments found for this disease.")
+        st.caption(f"🧾 Showing top 5 per category for **{disease}**. Total unique suggestions: {len(cleaned_result)}")
+
